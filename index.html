@@ -1,0 +1,998 @@
+    .glow-amber {
+        box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
+    }
+
+    .glow-emerald {
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+    }
+
+    .glow-rose {
+        box-shadow: 0 0 25px rgba(244, 63, 94, 0.4);
+    }
+
+    .shake {
+        animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    @keyframes shake {
+        10%, 90% { transform: translate3d(-2px, 0, 0); }
+        20%, 80% { transform: translate3d(4px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+        40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
+
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.88);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+</style>
+
+
+<header class="text-center mb-2 w-full max-w-lg flex items-center justify-between px-2">
+    <div class="flex items-center gap-2">
+        <span class="text-2xl sm:text-3xl">🛴</span>
+        <div class="text-left">
+            <h1 class="text-lg sm:text-xl font-black bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400 bg-clip-text text-transparent leading-tight">
+                TROTT'SÛRE
+            </h1>
+            <p class="text-[10px] sm:text-xs text-slate-400 font-medium">Urban Night & Day Challenge</p>
+        </div>
+    </div>
+    
+    <!-- Record de score -->
+    <div class="bg-slate-900/80 px-3 py-1 rounded-xl border border-slate-800 flex items-center gap-2">
+        <span class="text-amber-400 text-xs">🏆 Best:</span>
+        <span id="highscore-display" class="font-extrabold text-amber-300 text-sm">0</span>
+    </div>
+</header>
+
+<main id="game-container" class="relative w-full max-w-md bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-2 border-slate-800 flex flex-col items-center">
+    
+    <!-- HUD Supérieur -->
+    <div id="hud" class="w-full bg-slate-950/90 backdrop-blur-md px-4 py-2.5 flex justify-between items-center border-b border-slate-800/80 z-10 text-xs font-bold">
+        <!-- Score -->
+        <div class="flex flex-col">
+            <span class="text-slate-500 text-[9px] tracking-wider uppercase">Score</span>
+            <span id="score-display" class="text-emerald-400 font-black text-base sm:text-lg">0</span>
+        </div>
+
+        <!-- Moment de la journée -->
+        <div class="flex flex-col items-center">
+            <span class="text-slate-500 text-[9px] tracking-wider uppercase">Ambiance</span>
+            <span id="time-display" class="text-amber-300 font-bold text-xs flex items-center gap-1">☀️ Jour</span>
+        </div>
+
+        <!-- Tachymètre (Vitesse) -->
+        <div class="flex flex-col items-center">
+            <span class="text-slate-500 text-[9px] tracking-wider uppercase">Vitesse</span>
+            <div class="flex items-baseline gap-0.5">
+                <span id="speed-display" class="text-amber-400 font-black text-base sm:text-lg">15</span>
+                <span class="text-amber-500/80 text-[10px]">km/h</span>
+            </div>
+        </div>
+
+        <!-- Vies (Cœurs) -->
+        <div class="flex flex-col items-end">
+            <span class="text-slate-500 text-[9px] tracking-wider uppercase">Santé</span>
+            <div id="lives-display" class="flex gap-1 text-sm sm:text-base mt-0.5">
+                <span>❤️</span><span>❤️</span><span>❤️</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone du Canvas -->
+    <div class="relative w-full flex justify-center bg-slate-950 overflow-hidden" style="height: 480px;">
+        <canvas id="gameCanvas" width="400" height="480" class="block w-full h-full max-w-[400px]"></canvas>
+
+        <!-- Écran d'Accueil / Menu Principal -->
+        <div id="start-screen" class="absolute inset-0 glass-panel flex flex-col items-center justify-between p-6 text-center z-20">
+            <div class="my-auto flex flex-col items-center">
+                <div class="w-20 h-20 bg-gradient-to-tr from-amber-500 to-emerald-500 rounded-3xl flex items-center justify-center text-4xl shadow-lg mb-4 glow-amber animate-pulse">
+                    🦺
+                </div>
+                <h2 class="text-2xl font-black text-amber-400 mb-1">Trajet Urbain & Gilet Fluo</h2>
+                <p class="text-xs text-slate-300 max-w-xs leading-relaxed mb-4">
+                    Équipe ton gilet jaune, ramasse les bonus sur la piste cyclable, double les usagers et survis à la tombée de la nuit !
+                </p>
+
+                <div class="grid grid-cols-2 gap-2 text-left w-full max-w-xs bg-slate-900/60 p-3 rounded-2xl border border-slate-800 text-[11px] mb-2">
+                    <div class="flex items-center gap-2">
+                        <span>🚗</span> <span class="text-slate-300">Portières & Voitures</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span>🚲</span> <span class="text-slate-300">Doubler les vélos</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span>💖</span> <span class="text-slate-300">Bonus Vie & Boost</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span>🌙</span> <span class="text-slate-300">Nuit & Phares auto</span>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:opacity-95 text-slate-950 font-black rounded-2xl shadow-xl transform active:scale-95 transition-all text-sm tracking-wide glow-amber">
+                🚀 COMMENCER LE TRAJET
+            </button>
+        </div>
+
+        <!-- Écran Game Over -->
+        <div id="game-over-screen" class="absolute inset-0 glass-panel flex flex-col items-center justify-between p-5 text-center z-20 hidden">
+            <div class="my-auto w-full flex flex-col items-center">
+                <div class="w-16 h-16 bg-rose-500/20 border border-rose-500/40 rounded-full flex items-center justify-center text-3xl mb-2 text-rose-500 glow-rose">
+                    💥
+                </div>
+                <h2 class="text-xl font-black text-rose-400 mb-1">Impact ! Trajet Interrompu</h2>
+                <p class="text-[11px] text-slate-400 mb-3">La sécurité nécessite une anticipation constante.</p>
+                
+                <div class="bg-slate-900/80 w-full p-3.5 rounded-2xl border border-slate-800 text-xs space-y-2 mb-3">
+                    <div class="flex justify-between items-center border-b border-slate-800/60 pb-1.5">
+                        <span class="text-slate-400">Score total :</span>
+                        <span id="final-score" class="font-extrabold text-emerald-400 text-sm">0</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-800/60 pb-1.5">
+                        <span class="text-slate-400">Vitesse max :</span>
+                        <span id="final-speed" class="font-extrabold text-amber-400 text-sm">0 km/h</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Distance :</span>
+                        <span id="final-distance" class="font-extrabold text-sky-400 text-sm">0 m</span>
+                    </div>
+                </div>
+
+                <div id="educational-tip" class="bg-amber-950/60 border border-amber-500/30 p-3 rounded-2xl text-[11px] text-amber-200 text-left leading-relaxed w-full">
+                    💡 <b>Conseil Sécurité :</b> De nuit ou par faible visibilité, le gilet rétro-réfléchissant est obligatoire hors agglomération et fortement recommandé en ville !
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-95 text-slate-950 font-black rounded-2xl shadow-xl transform active:scale-95 transition-all text-sm tracking-wide glow-emerald">
+                🔄 REJOUER ET TENTER UN RECORD
+            </button>
+        </div>
+    </div>
+
+    <!-- Commandes Tactiles pour Mobile -->
+    <div class="w-full bg-slate-950 p-3 grid grid-cols-2 gap-3 border-t border-slate-800 z-10">
+        <button onclick="movePlayer(-1)" class="py-3.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-100 font-extrabold rounded-2xl text-sm flex items-center justify-center gap-2 shadow-inner border border-slate-700/50 transition">
+            <span>◀</span> GAUCHE
+        </button>
+        <button onclick="movePlayer(1)" class="py-3.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-100 font-extrabold rounded-2xl text-sm flex items-center justify-center gap-2 shadow-inner border border-slate-700/50 transition">
+            DROITE <span>▶</span>
+        </button>
+    </div>
+
+    <div class="w-full bg-slate-950/90 px-4 py-2 text-center border-t border-slate-800/60 text-[10px] text-slate-400">
+        🦺 Gilet fluo + Phares allumés : Sois vu pour rouler en toute sécurité !
+    </div>
+</main>
+
+<script>
+    // Synthesizer Audio avec Tone.js pour les impacts et bonus
+    let soundSynth = null;
+    let noiseSynth = null;
+
+    function initAudio() {
+        if (!soundSynth) {
+            soundSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+            soundSynth.volume.value = -6;
+            
+            noiseSynth = new Tone.NoiseSynth({
+                noise: { type: 'pink' },
+                envelope: { attack: 0.005, decay: 0.2, sustain: 0 }
+            }).toDestination();
+            noiseSynth.volume.value = -4;
+        }
+        Tone.start();
+    }
+
+    function playImpactSound() {
+        if (noiseSynth) {
+            noiseSynth.triggerAttackRelease("16n");
+            if (soundSynth) soundSynth.triggerAttackRelease(["C2", "F#2"], "8n");
+        }
+    }
+
+    function playPassSound() {
+        if (soundSynth) {
+            soundSynth.triggerAttackRelease("E5", "32n", undefined, 0.2);
+        }
+    }
+
+    function playBonusSound() {
+        if (soundSynth) {
+            soundSynth.triggerAttackRelease(["C5", "E5", "G5"], "16n");
+        }
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gameContainer = document.getElementById('game-container');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const scoreDisplay = document.getElementById('score-display');
+    const speedDisplay = document.getElementById('speed-display');
+    const livesDisplay = document.getElementById('lives-display');
+    const highscoreDisplay = document.getElementById('highscore-display');
+    const timeDisplay = document.getElementById('time-display');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const finalSpeedDisplay = document.getElementById('final-speed');
+    const finalDistanceDisplay = document.getElementById('final-distance');
+    const educationalTip = document.getElementById('educational-tip');
+
+    let highScore = parseInt(localStorage.getItem('trott_sure_highscore')) || 0;
+    highscoreDisplay.textContent = highScore;
+
+    let gameState = 'START';
+    let score = 0;
+    let distance = 0;
+    let lives = 3;
+    let baseSpeed = 4.5;
+    let gameSpeed = baseSpeed;
+    let currentKmh = 15;
+    let maxKmhReached = 15;
+    let frameCount = 0;
+    let roadOffset = 0;
+    let floatingTexts = [];
+
+    // Cycle Jour/Nuit progressif (0: Plein Jour, 1.0: Nuit Noire)
+    let nightFactor = 0; 
+
+    const laneX = [80, 200, 320];
+    
+    let player = {
+        lane: 0,
+        x: laneX[0],
+        y: 380,
+        targetX: laneX[0],
+        width: 32,
+        height: 64
+    };
+
+    let scenery = [];
+    function initScenery() {
+        scenery = [];
+        for (let y = -100; y < canvas.height + 100; y += 90) {
+            scenery.push({ y: y, side: 'left', type: Math.random() > 0.4 ? 'tree' : 'lamp' });
+            scenery.push({ y: y + 45, side: 'right', type: Math.random() > 0.4 ? 'building' : 'lamp' });
+        }
+    }
+
+    // Catalogue d'autres usagers à doubler sur la voie
+    const trafficCatalog = [
+        {
+            type: 'cyclist',
+            name: 'Cycliste prudent',
+            width: 28,
+            height: 52,
+            speedOffset: -1.8,
+            draw: (ctx, x, y, night) => {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(x, y + 15, 12, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cadre vélo
+                ctx.strokeStyle = '#0284c7';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x, y - 18);
+                ctx.lineTo(x, y + 18);
+                ctx.stroke();
+
+                // Casque
+                ctx.fillStyle = '#06b6d4';
+                ctx.beginPath();
+                ctx.arc(x, y - 10, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Vêtement
+                ctx.fillStyle = '#38bdf8';
+                roundRect(ctx, x - 8, y - 4, 16, 14, 3, true, false);
+
+                // Feu arrière vélo
+                ctx.fillStyle = '#ef4444';
+                if (night > 0.3) {
+                    ctx.shadowColor = '#ef4444';
+                    ctx.shadowBlur = 8;
+                }
+                ctx.fillRect(x - 2, y + 18, 4, 3);
+                ctx.restore();
+            }
+        },
+        {
+            type: 'slow_scooter',
+            name: 'Trottinette lente',
+            width: 28,
+            height: 54,
+            speedOffset: -1.2,
+            draw: (ctx, x, y, night) => {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(x, y + 16, 12, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Deck trottinette
+                ctx.fillStyle = '#8b5cf6';
+                roundRect(ctx, x - 5, y - 12, 10, 28, 3, true, false);
+
+                // Conducteur
+                ctx.fillStyle = '#c084fc';
+                roundRect(ctx, x - 9, y - 6, 18, 12, 3, true, false);
+
+                // Casque
+                ctx.fillStyle = '#a855f7';
+                ctx.beginPath();
+                ctx.arc(x, y - 12, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+    ];
+
+    // Catalogue des Bonus
+    const bonusCatalog = [
+        {
+            type: 'life_bonus',
+            name: 'Bonus Soin / Vie',
+            width: 28,
+            height: 28,
+            draw: (ctx, x, y) => {
+                ctx.save();
+                ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
+                ctx.beginPath();
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#f43f5e';
+                ctx.shadowColor = '#f43f5e';
+                ctx.shadowBlur = 10;
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('❤️', x, y);
+                ctx.restore();
+            },
+            apply: () => {
+                if (lives < 3) lives++;
+                score += 50;
+                addFloatingText("+1 VIE! ❤️", player.x, player.y - 30, '#f43f5e');
+            }
+        },
+        {
+            type: 'speed_bonus',
+            name: 'Boost de Vitesse',
+            width: 28,
+            height: 28,
+            draw: (ctx, x, y) => {
+                ctx.save();
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+                ctx.beginPath();
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#10b981';
+                ctx.shadowColor = '#10b981';
+                ctx.shadowBlur = 10;
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('⚡', x, y);
+                ctx.restore();
+            },
+            apply: () => {
+                score += 120;
+                gameSpeed += 0.6;
+                addFloatingText("BOOST! ⚡ +120", player.x, player.y - 30, '#10b981');
+            }
+        },
+        {
+            type: 'star_bonus',
+            name: 'Bonus Points',
+            width: 28,
+            height: 28,
+            draw: (ctx, x, y) => {
+                ctx.save();
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+                ctx.beginPath();
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.shadowColor = '#f59e0b';
+                ctx.shadowBlur = 10;
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('⭐', x, y);
+                ctx.restore();
+            },
+            apply: () => {
+                score += 150;
+                addFloatingText("+150 PTS ⭐", player.x, player.y - 30, '#f59e0b');
+            }
+        }
+    ];
+
+    // Catalogue des Obstacles
+    const obstacleCatalog = [
+        {
+            type: 'car_door',
+            name: 'Voiture avec Portière',
+            width: 58,
+            height: 80,
+            tip: "⚠️ <b>Portière ouverte :</b> Laisse toujours au moins 1 mètre de distance latérale avec les voitures garées. Une portière peut surgir soudainement !",
+            draw: (ctx, x, y, night) => {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.fillRect(x - 22, y - 36, 44, 76);
+
+                ctx.fillStyle = '#2563eb';
+                roundRect(ctx, x - 22, y - 38, 44, 76, 8, true, true);
+
+                ctx.fillStyle = '#0f172a';
+                roundRect(ctx, x - 17, y - 22, 34, 18, 4, true, false);
+                roundRect(ctx, x - 17, y + 10, 34, 14, 3, true, false);
+
+                ctx.fillStyle = '#1d4ed8';
+                ctx.fillRect(x - 26, y - 18, 5, 8);
+                ctx.fillRect(x + 21, y - 18, 5, 8);
+
+                ctx.fillStyle = night > 0.3 ? '#ef4444' : '#991b1b';
+                if (night > 0.3) {
+                    ctx.shadowColor = '#ef4444';
+                    ctx.shadowBlur = 8 * night;
+                }
+                ctx.fillRect(x - 19, y + 33, 10, 4);
+                ctx.fillRect(x + 9, y + 33, 10, 4);
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = '#1d4ed8';
+                ctx.beginPath();
+                ctx.moveTo(x - 22, y - 5);
+                ctx.lineTo(x - 48, y + 18);
+                ctx.lineTo(x - 48, y - 8);
+                ctx.lineTo(x - 22, y - 18);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#60a5fa';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#334155';
+                ctx.beginPath();
+                ctx.moveTo(x - 23, y - 3);
+                ctx.lineTo(x - 45, y + 15);
+                ctx.lineTo(x - 45, y - 4);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            }
+        },
+        {
+            type: 'pedestrian',
+            name: 'Piéton imprudent',
+            width: 32,
+            height: 40,
+            tip: "🚶‍♂️ <b>Priorité Piéton :</b> Les piétons ont toujours la priorité. Sois particulièrement attentif la nuit où ils sont moins visibles !",
+            draw: (ctx, x, y, night) => {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(x, y + 16, 12, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#f87171';
+                ctx.beginPath();
+                ctx.arc(x, y - 12, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = night > 0.5 ? '#334155' : '#ea580c';
+                roundRect(ctx, x - 9, -4 + y, 18, 20, 4, true, false);
+
+                ctx.fillStyle = '#1e3a8a';
+                ctx.fillRect(x - 7, y + 14, 14, 10);
+                ctx.restore();
+            }
+        },
+        {
+            type: 'red_light',
+            name: 'Feu Tricolore',
+            width: 28,
+            height: 50,
+            tip: "🛑 <b>Feu Rouge :</b> Arrêt absolu obligatoire ! Grillé un feu rouge met en danger ta vie et celle des autres usagers.",
+            draw: (ctx, x, y, night) => {
+                ctx.save();
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(x - 4, y - 25, 8, 50);
+                ctx.fillStyle = '#0f172a';
+                roundRect(ctx, x - 13, y - 25, 26, 40, 4, true, true);
+
+                ctx.fillStyle = '#ef4444';
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 14;
+                ctx.beginPath();
+                ctx.arc(x, y - 14, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = '#334155';
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.arc(x, y + 12, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        },
+        {
+            type: 'pothole',
+            name: 'Nid-de-poule',
+            width: 40,
+            height: 28,
+            tip: "🕳️ <b>Pièges de la route :</b> De nuit, utilise le phare de ta trottinette pour repérer les trous et débris à temps !",
+            draw: (ctx, x, y, night) => {
+                ctx.save();
+                ctx.fillStyle = '#050811';
+                ctx.beginPath();
+                ctx.ellipse(x, y, 20, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+    ];
+
+    let obstacles = [];
+    let items = [];
+
+    window.addEventListener('keydown', (e) => {
+        if (gameState !== 'PLAYING') return;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            movePlayer(-1);
+        } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            movePlayer(1);
+        }
+    });
+
+    window.movePlayer = function movePlayer(direction) {
+        if (gameState !== 'PLAYING') return;
+        player.lane = Math.max(0, Math.min(2, player.lane + direction));
+        player.targetX = laneX[player.lane];
+    };
+
+    function addFloatingText(text, x, y, color) {
+        floatingTexts.push({ text, x, y, opacity: 1, color, life: 30 });
+    }
+
+    window.startGame = function startGame() {
+        initAudio();
+        gameState = 'PLAYING';
+        score = 0;
+        distance = 0;
+        lives = 3;
+        gameSpeed = baseSpeed;
+        currentKmh = 15;
+        maxKmhReached = 15;
+        nightFactor = 0;
+        obstacles = [];
+        items = [];
+        floatingTexts = [];
+        player.lane = 0;
+        player.x = laneX[0];
+        player.targetX = laneX[0];
+        frameCount = 0;
+
+        initScenery();
+        
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        
+        updateHUD();
+        requestAnimationFrame(gameLoop);
+    };
+
+    function updateHUD() {
+        scoreDisplay.textContent = Math.floor(score);
+        
+        currentKmh = Math.floor(15 + (gameSpeed - baseSpeed) * 4.5);
+        if (currentKmh > maxKmhReached) maxKmhReached = currentKmh;
+        
+        speedDisplay.textContent = currentKmh;
+        livesDisplay.innerHTML = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+
+        if (nightFactor < 0.25) {
+            timeDisplay.innerHTML = '☀️ Jour';
+            timeDisplay.className = 'text-amber-300 font-bold text-xs flex items-center gap-1';
+        } else if (nightFactor < 0.7) {
+            timeDisplay.innerHTML = '🌅 Crépuscule';
+            timeDisplay.className = 'text-orange-400 font-bold text-xs flex items-center gap-1';
+        } else {
+            timeDisplay.innerHTML = '🌙 Nuit Noire';
+            timeDisplay.className = 'text-indigo-400 font-bold text-xs flex items-center gap-1';
+        }
+    }
+
+    function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, radius);
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+    }
+
+    function drawSceneryAndRoad() {
+        let roadGrey = Math.floor(30 - nightFactor * 18);
+        ctx.fillStyle = `rgb(${roadGrey}, ${roadGrey + 5}, ${roadGrey + 10})`;
+        ctx.fillRect(20, 0, 360, canvas.height);
+
+        let sidewalkGrey = Math.floor(51 - nightFactor * 30);
+        ctx.fillStyle = `rgb(${sidewalkGrey}, ${sidewalkGrey}, ${sidewalkGrey + 5})`;
+        ctx.fillRect(0, 0, 20, canvas.height);
+        ctx.fillRect(380, 0, 20, canvas.height);
+
+        ctx.fillStyle = nightFactor > 0.5 ? 'rgba(6, 78, 59, 0.4)' : 'rgba(16, 185, 129, 0.12)';
+        ctx.fillRect(20, 0, 120, canvas.height);
+
+        ctx.strokeStyle = nightFactor > 0.5 ? '#334155' : '#64748b';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([20, 20]);
+        ctx.lineDashOffset = -roadOffset;
+        
+        ctx.beginPath();
+        ctx.moveTo(140, 0);
+        ctx.lineTo(140, canvas.height);
+        ctx.moveTo(260, 0);
+        ctx.lineTo(260, canvas.height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        scenery.forEach(item => {
+            let sx = item.side === 'left' ? 10 : 390;
+            if (item.type === 'tree') {
+                ctx.fillStyle = nightFactor > 0.5 ? '#064e3b' : '#047857';
+                ctx.beginPath();
+                ctx.arc(sx, item.y, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(sx - 3, item.y + 10, 6, 16);
+            } else if (item.type === 'building') {
+                ctx.fillStyle = nightFactor > 0.5 ? '#0f172a' : '#334155';
+                ctx.fillRect(sx - 12, item.y - 20, 24, 45);
+                if (nightFactor > 0.3) {
+                    ctx.fillStyle = '#fde047';
+                    ctx.fillRect(sx - 8, item.y - 12, 5, 6);
+                    ctx.fillRect(sx + 3, item.y - 12, 5, 6);
+                }
+            } else if (item.type === 'lamp') {
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(sx - 2, item.y - 15, 4, 35);
+                if (nightFactor > 0.2) {
+                    ctx.fillStyle = '#fde047';
+                    ctx.shadowColor = '#fde047';
+                    ctx.shadowBlur = 12 * nightFactor;
+                    ctx.beginPath();
+                    ctx.arc(sx, item.y - 15, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+        });
+    }
+
+    function drawPlayer() {
+        ctx.save();
+        const px = player.x;
+        const py = player.y;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(px, py + 22, 14, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        roundRect(ctx, px - 6, py - 4, 12, 34, 4, true, false);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        roundRect(ctx, px - 6, py - 4, 12, 34, 4, false, true);
+
+        ctx.fillStyle = '#020617';
+        ctx.beginPath();
+        ctx.arc(px, py + 24, 6, 0, Math.PI * 2);
+        ctx.arc(px, py - 6, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(px, py - 6);
+        ctx.lineTo(px, py - 20);
+        ctx.moveTo(px - 10, py - 20);
+        ctx.lineTo(px + 10, py - 20);
+        ctx.stroke();
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(px, py - 18, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#facc15';
+        ctx.shadowColor = '#facc15';
+        ctx.shadowBlur = nightFactor > 0.4 ? 12 : 3;
+        roundRect(ctx, px - 11, py - 12, 22, 18, 4, true, false);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px - 7, py - 8, 3, 10);
+        ctx.fillRect(px + 4, py - 8, 3, 10);
+        ctx.shadowBlur = 0;
+
+        if (nightFactor > 0.2) {
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 18;
+            ctx.beginPath();
+            ctx.arc(px, py - 22, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            let grad = ctx.createRadialGradient(px, py - 22, 5, px, py - 80, 100);
+            grad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+            grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(px, py - 22);
+            ctx.lineTo(px - 60, py - 120);
+            ctx.lineTo(px + 60, py - 120);
+            ctx.closePath();
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+    }
+
+    function drawNightOverlay() {
+        if (nightFactor > 0) {
+            ctx.fillStyle = `rgba(3, 7, 18, ${nightFactor * 0.72})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    function drawFloatingTexts() {
+        floatingTexts.forEach(ft => {
+            ctx.save();
+            ctx.globalAlpha = ft.opacity;
+            ctx.fillStyle = ft.color;
+            ctx.font = 'bold 13px Outfit, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = ft.color;
+            ctx.shadowBlur = 8;
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+        });
+    }
+
+    function spawnEntities() {
+        const spawnInterval = Math.max(28, Math.floor(82 - (gameSpeed * 4)));
+        
+        if (frameCount % spawnInterval === 0) {
+            const laneIndex = Math.floor(Math.random() * 3);
+            const isBonus = Math.random() < (laneIndex === 0 ? 0.45 : 0.2);
+            
+            if (isBonus) {
+                const bonusItem = bonusCatalog[Math.floor(Math.random() * bonusCatalog.length)];
+                items.push({
+                    category: 'bonus',
+                    lane: laneIndex,
+                    x: laneX[laneIndex],
+                    y: -50,
+                    width: bonusItem.width,
+                    height: bonusItem.height,
+                    data: bonusItem
+                });
+            } else {
+                const isTrafficUser = Math.random() < 0.35;
+                if (isTrafficUser) {
+                    const trafficItem = trafficCatalog[Math.floor(Math.random() * trafficCatalog.length)];
+                    items.push({
+                        category: 'traffic',
+                        lane: laneIndex,
+                        x: laneX[laneIndex],
+                        y: -60,
+                        width: trafficItem.width,
+                        height: trafficItem.height,
+                        speedOffset: trafficItem.speedOffset,
+                        passed: false,
+                        data: trafficItem
+                    });
+                } else {
+                    const catalogItem = obstacleCatalog[Math.floor(Math.random() * obstacleCatalog.length)];
+                    obstacles.push({
+                        lane: laneIndex,
+                        x: laneX[laneIndex],
+                        y: -70,
+                        width: catalogItem.width,
+                        height: catalogItem.height,
+                        catalogItem: catalogItem,
+                        passed: false
+                    });
+                }
+            }
+        }
+    }
+
+    function updateGame() {
+        frameCount++;
+        distance += Math.floor(gameSpeed / 2);
+        score += gameSpeed * 0.15;
+
+        gameSpeed += 0.0012;
+
+        if (nightFactor < 1.0) {
+            nightFactor += 0.00025;
+        }
+
+        roadOffset = (roadOffset + gameSpeed) % 40;
+        player.x += (player.targetX - player.x) * 0.25;
+
+        scenery.forEach(item => {
+            item.y += gameSpeed;
+            if (item.y > canvas.height + 60) {
+                item.y = -60;
+            }
+        });
+
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            let ft = floatingTexts[i];
+            ft.y -= 1.5;
+            ft.opacity -= 0.03;
+            if (ft.opacity <= 0) floatingTexts.splice(i, 1);
+        }
+
+        spawnEntities();
+
+        for (let i = items.length - 1; i >= 0; i--) {
+            let it = items[i];
+            const itemSpeed = it.category === 'traffic' ? gameSpeed + it.speedOffset : gameSpeed;
+            it.y += itemSpeed;
+
+            const pBox = { x: player.x - 14, y: player.y - 20, w: 28, h: 50 };
+            const iBox = { x: it.x - it.width / 2, y: it.y - it.height / 2, w: it.width, h: it.height };
+
+            if (it.category === 'traffic' && !it.passed && it.y > player.y + player.height) {
+                it.passed = true;
+                score += 40;
+                addFloatingText("DOUBLÉ ! +40", it.x, it.y - 20, '#38bdf8');
+                playPassSound();
+            }
+
+            if (
+                pBox.x < iBox.x + iBox.w &&
+                pBox.x + pBox.w > iBox.x &&
+                pBox.y < iBox.y + iBox.h &&
+                pBox.y + pBox.h > iBox.y
+            ) {
+                if (it.category === 'bonus') {
+                    it.data.apply();
+                    playBonusSound();
+                    items.splice(i, 1);
+                    continue;
+                } else if (it.category === 'traffic') {
+                    lives--;
+                    updateHUD();
+                    playImpactSound();
+                    gameContainer.classList.add('shake');
+                    setTimeout(() => gameContainer.classList.remove('shake'), 300);
+
+                    educationalTip.innerHTML = "🚴 <b>Distance de sécurité :</b> Laisse au moins 1 mètre d'espace latéral lorsque tu doubles un autre usager sur la piste cyclable !";
+                    items.splice(i, 1);
+
+                    if (lives <= 0) {
+                        endGame();
+                        return;
+                    }
+                    continue;
+                }
+            }
+
+            if (it.y > canvas.height + 80) {
+                items.splice(i, 1);
+            }
+        }
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let obs = obstacles[i];
+            obs.y += gameSpeed;
+
+            if (!obs.passed && obs.y > player.y + player.height) {
+                obs.passed = true;
+                score += 30;
+                addFloatingText("+30", obs.x, obs.y - 20, '#10b981');
+                playPassSound();
+            }
+
+            const pBox = { x: player.x - 14, y: player.y - 20, w: 28, h: 50 };
+            const oBox = { x: obs.x - obs.width / 2, y: obs.y - obs.height / 2, w: obs.width, h: obs.height };
+
+            if (
+                pBox.x < oBox.x + oBox.w &&
+                pBox.x + pBox.w > oBox.x &&
+                pBox.y < oBox.y + oBox.h &&
+                pBox.y + pBox.h > oBox.y
+            ) {
+                lives--;
+                updateHUD();
+                playImpactSound();
+                
+                gameContainer.classList.add('shake');
+                setTimeout(() => gameContainer.classList.remove('shake'), 300);
+
+                educationalTip.innerHTML = obs.catalogItem.tip;
+                obstacles.splice(i, 1);
+
+                if (lives <= 0) {
+                    endGame();
+                    return;
+                }
+            }
+
+            if (obs.y > canvas.height + 80) {
+                obstacles.splice(i, 1);
+            }
+        }
+
+        updateHUD();
+    }
+
+    function drawItems() {
+        items.forEach(it => {
+            it.data.draw(ctx, it.x, it.y, nightFactor);
+        });
+    }
+
+    function drawObstacles() {
+        obstacles.forEach(obs => {
+            obs.catalogItem.draw(ctx, obs.x, obs.y, nightFactor);
+        });
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawSceneryAndRoad();
+        drawItems();
+        drawObstacles();
+        drawPlayer();
+        drawNightOverlay();
+        drawFloatingTexts();
+    }
+
+    function gameLoop() {
+        if (gameState !== 'PLAYING') return;
+        updateGame();
+        render();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+        gameState = 'GAMEOVER';
+        
+        const finalScoreVal = Math.floor(score);
+        if (finalScoreVal > highScore) {
+            highScore = finalScoreVal;
+            localStorage.setItem('trott_sure_highscore', highScore);
+            highscoreDisplay.textContent = highScore;
+        }
+
+        finalScoreDisplay.textContent = finalScoreVal;
+        finalSpeedDisplay.textContent = maxKmhReached + ' km/h';
+        finalDistanceDisplay.textContent = distance + ' m';
+        
+        gameOverScreen.classList.remove('hidden');
+    }
+
+    initScenery();
+    render();
+</script>
