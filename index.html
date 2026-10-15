@@ -2,566 +2,752 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trott'Sûre - Sécurité Routière</title>
-    <!-- Tailwind CSS pour un design moderne -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Tone.js pour les effets sonores synthétisés -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Street Safety: Dash & Quiz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
-        .glow-amber { box-shadow: 0 0 25px rgba(245, 158, 11, 0.4); }
-        .glow-emerald { box-shadow: 0 0 25px rgba(16, 185, 129, 0.4); }
-        .glow-rose { box-shadow: 0 0 25px rgba(244, 63, 94, 0.4); }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-2px, 0, 0); }
-            20%, 80% { transform: translate3d(4px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-            40%, 60% { transform: translate3d(6px, 0, 0); }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
         }
-        .shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
-        .glass-panel { background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        body {
+            background-color: #0d1117;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            max-height: 850px;
+            background: #1e293b;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-align: center;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 32px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #fff;
+            border: none;
+            padding: 16px 36px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5), inset 0 2px 0 rgba(255,255,255,0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+        }
+
+        /* HUD Top Bar */
+        #hud {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .hud-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 12px;
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hud-val {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #38bdf8;
+        }
+
+        .hud-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        /* Quiz Overlay Modern Style */
+        #quiz-modal {
+            background: rgba(15, 23, 42, 0.92);
+        }
+
+        .quiz-card {
+            background: #1e293b;
+            border: 2px solid #38bdf8;
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .quiz-tag {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .quiz-question {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .quiz-option {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .quiz-option:hover, .quiz-option:active {
+            border-color: #38bdf8;
+            background: #1e293b;
+            transform: translateY(-2px);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin: 20px 0;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            text-align: left;
+            width: 100%;
+        }
+
+        .instructions p {
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 font-sans select-none overflow-x-hidden">
+<body>
 
-    <!-- En-tête / HUD -->
-    <header id="hud" class="w-full max-w-md flex justify-between items-center glass-panel p-3 rounded-2xl shadow-lg border border-slate-800 z-10 transition-all duration-300">
-        <div class="flex items-center gap-2">
-            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Score</span>
-            <span id="scoreDisplay" class="text-xl font-black text-amber-400">0</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <span id="ambianceLabel" class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-medium flex items-center gap-1">☀️ Jour</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <span id="speedDisplay" class="text-sm font-bold text-emerald-400">15 km/h</span>
-        </div>
-        <div class="flex items-center gap-1">
-            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold mr-1">Vies</span>
-            <div id="livesContainer" class="flex gap-1 text-rose-500 text-lg">
-                ❤️❤️❤️
+<div id="game-container">
+    <canvas id="canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+        <div class="hud-card">
+            <div>
+                <div class="hud-label">Score</div>
+                <div id="score-val" class="hud-val">0m</div>
             </div>
         </div>
-    </header>
+        <div class="hud-card">
+            <div>
+                <div class="hud-label">Vies</div>
+                <div id="lives-val" class="hud-val">❤️❤️❤️</div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Zone principale de jeu -->
-    <main id="gameContainer" class="relative w-full max-w-md my-4 aspect-[3/4] max-h-[60vh] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border-2 border-slate-800 flex items-center justify-center">
+    <!-- Start Screen -->
+    <div id="start-modal" class="overlay">
+        <div class="title">Street Safety<br>Dash & Quiz</div>
+        <div class="subtitle">Sensibilisation Routière 2.5D Mobile</div>
         
-        <!-- Écran d'accueil -->
-        <div id="startScreen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
-            <div class="w-20 h-20 bg-gradient-to-tr from-amber-500 to-emerald-500 rounded-3xl flex items-center justify-center shadow-xl shadow-amber-500/20 mb-4 text-4xl animate-bounce">
-                🦺
-            </div>
-            <h1 class="text-3xl font-black tracking-tight text-white mb-2">Trott'Sûre</h1>
-            <p class="text-sm text-slate-300 mb-6">Équipe ton gilet jaune, ramasse les bonus sur la piste cyclable, double les usagers et survis à la tombée de la nuit !</p>
-            <button onclick="startGame()" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-amber-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2 text-lg">
-                🚀 COMMENCER LE TRAJET
-            </button>
+        <div class="instructions">
+            <p>📱 <b>Swipe Gauche / Droite</b> : Changer de voie</p>
+            <p>⬆️ <b>Swipe Haut</b> : Sauter obstacle au sol</p>
+            <p>⬇️ <b>Swipe Bas</b> : Freiner / Ralentir</p>
+            <p>🧠 <b>Ralentis Tactiques</b> : Réponds aux questions !</p>
         </div>
 
-        <!-- Écran de Fin de Partie (Game Over) -->
-        <div id="gameOverScreen" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center hidden">
-            <div class="text-5xl mb-2">💥</div>
-            <h2 class="text-2xl font-black text-rose-500 mb-1">Trajet Interrompu</h2>
-            <p id="finalScoreText" class="text-slate-300 font-semibold mb-4">Score final : 0</p>
-            
-            <div class="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl mb-6 text-left">
-                <span class="text-xs uppercase tracking-wider text-amber-400 font-bold block mb-1">💡 Conseil Sécurité Routière</span>
-                <p id="educationalTip" class="text-xs text-slate-300 italic">"Toujours porter un casque homologué et un gilet de haute visibilité hors agglomération ou par luminosité insuffisante."</p>
-            </div>
+        <button class="btn-primary" onclick="startGame()">Jouer !</button>
+    </div>
 
-            <button onclick="startGame()" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/30 transition-all transform active:scale-95">
-                🔄 REPARTIR EN TROTINETTE
-            </button>
+    <!-- Quiz Overlay -->
+    <div id="quiz-modal" class="overlay hidden">
+        <div class="quiz-card">
+            <span class="quiz-tag">⚠️ Ralenti Tactique</span>
+            <div id="quiz-q" class="quiz-question">Question...</div>
+            <div id="quiz-options"></div>
         </div>
+    </div>
 
-        <!-- Canvas du jeu -->
-        <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
-    </main>
+    <!-- Game Over Screen -->
+    <div id="gameover-modal" class="overlay hidden">
+        <div class="title" style="background: linear-gradient(135deg, #ef4444, #f97316); -webkit-background-clip: text;">Partie Terminée</div>
+        <div class="subtitle" id="final-score">Distance : 0m</div>
+        <button class="btn-primary" onclick="startGame()">Réessayer</button>
+    </div>
+</div>
 
-    <!-- Contrôles tactiles pour mobile et tablettes -->
-    <footer class="w-full max-w-md grid grid-cols-2 gap-3 z-10">
-        <button onclick="movePlayer(-1)" class="py-4 bg-slate-900 hover:bg-slate-800 active:bg-slate-700 border border-slate-800 text-slate-200 font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all">
-            ⬅️ GAUCHE
-        </button>
-        <button onclick="movePlayer(1)" class="py-4 bg-slate-900 hover:bg-slate-800 active:bg-slate-700 border border-slate-800 text-slate-200 font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all">
-            DROITE ➡️
-        </button>
-    </footer>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-    <!-- Script de logique du jeu -->
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+// Dimensions
+let W = 400, H = 700;
+function resize() {
+    const container = document.getElementById('game-container');
+    W = container.clientWidth;
+    H = container.clientHeight;
+    canvas.width = W;
+    canvas.height = H;
+}
+resize();
+window.addEventListener('resize', resize);
 
-        // Dimensions logiques du Canvas
-        canvas.width = 400;
-        canvas.height = 600;
+// Sound Effects (Web Audio API)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(freq, type='sine', duration=0.1) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
 
-        let gameRunning = false;
-        let score = 0;
-        let lives = 3;
-        let speed = 4;
-        let baseSpeed = 4;
-        let distanceTraveled = 0;
-        let timeOfDay = 0; // 0 (Jour) à 1 (Nuit complète)
-        let isBoosting = false;
-        let boostTimer = 0;
+// Quiz Data
+const QUIZZES = [
+    {
+        q: "Un camion met son clignotant pour tourner à droite. Que fais-tu ?",
+        options: [
+            { text: "Je le dépasse vite par la droite", correct: false, msg: "Danger ! Tu te places en plein angle mort !" },
+            { text: "Je reste derrière et j'attends", correct: true, msg: "Bravo ! Tu évites l'angle mort mortel." },
+            { text: "Je monte sur le trottoir en roulant vite", correct: false, msg: "Les trottoirs sont réservés aux piétons !" }
+        ]
+    },
+    {
+        q: "Une voiture stationnée a un occupant à l'intérieur. Danger ?",
+        options: [
+            { text: "Aucun, elle est arrêtée", correct: false, msg: "Attention aux ouvertures intempestives de portière !" },
+            { text: "Portière possible ! Je m'écarte d'1m", correct: true, msg: "Parfait ! 1 mètre d'écart sauve des vies." },
+            { text: "Je frôle la voiture pour laisser la voie libre", correct: false, msg: "Trop près ! Un coup de portière et c'est la chute." }
+        ]
+    },
+    {
+        q: "La nuit commence à tomber. Quelle est la priorité ?",
+        options: [
+            { text: "Allumer mes feux & mettre mon gilet rétro-réfléchissant", correct: true, msg: "Excellent ! Être vu est essentiel." },
+            { text: "Rouler plus vite pour arriver avant le noir", correct: false, msg: "Inconscient ! La visibilité diminue fortement." },
+            { text: "Mettre mes écouteurs avec de la musique", correct: false, msg: "Interdit et très dangereux !" }
+        ]
+    },
+    {
+        q: "Tu approches d'un passage piéton et un piéton s'engage.",
+        options: [
+            { text: "Je klaxonne pour qu'il se dépêche", correct: false, msg: "Le piéton est toujours prioritaire !" },
+            { text: "Je m'arrête pour le laisser traverser", correct: true, msg: "Très bien ! Respect absolu des piétons." },
+            { text: "Je le contourne en accélérant", correct: false, msg: "Danger de collision !" }
+        ]
+    }
+];
 
-        // Configuration des voies (3 voies)
-        const lanes = [80, 200, 320]; // Voie 0: Piste cyclable (gauche), Voies 1 et 2: Route
-        let playerLane = 0; // Commence sur la piste cyclable
+// Game State
+let gameState = 'START'; // START, PLAYING, QUIZ, GAMEOVER
+let distance = 0;
+let lives = 3;
+let speed = 2.5; // Vitesse initiale très lente
+let dayCycle = 0; // 0 (Jour) -> 1 (Nuit)
+let lastQuizDist = 0;
 
-        const player = {
-            x: lanes[playerLane],
-            y: 480,
-            width: 36,
-            height: 60,
-            targetX: lanes[playerLane]
-        };
+// Player
+const player = {
+    lane: 1, // 0, 1, 2
+    x: 0,
+    targetX: 0,
+    y: 0,
+    jumpY: 0,
+    isJumping: false,
+    jumpV: 0,
+    width: 36,
+    height: 60
+};
 
-        let obstacles = [];
-        let scenery = [];
-        let particles = [];
-        let roadMarkersOffset = 0;
+// Lanes X coordinates
+function getLaneX(lane) {
+    const roadW = W * 0.7;
+    const roadLeft = (W - roadW) / 2;
+    const laneW = roadW / 3;
+    return roadLeft + laneW * lane + laneW / 2;
+}
 
-        // Sons synthétisés avec Tone.js
-        let synth, crashSynth, bonusSynth;
-        function initAudio() {
-            if (!synth) {
-                synth = new Tone.Synth().toDestination();
-                crashSynth = new Tone.NoiseSynth({
-                    noise: { type: 'white' },
-                    envelope: { attack: 0.005, decay: 0.3, sustain: 0 }
-                }).toDestination();
-                bonusSynth = new Tone.Synth({
-                    oscillator: { type: 'sine' },
-                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }
-                }).toDestination();
-            }
+// Obstacles & Elements
+let obstacles = [];
+let particles = [];
+let decorItems = [];
+
+// Touch Controls
+let touchStartX = 0;
+let touchStartY = 0;
+
+document.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+    if (gameState !== 'PLAYING') return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 30 && player.lane < 2) player.lane++;
+        else if (dx < -30 && player.lane > 0) player.lane--;
+    } else {
+        if (dy < -30 && !player.isJumping) {
+            player.isJumping = true;
+            player.jumpV = 10;
+            playSound(440, 'triangle');
+        } else if (dy > 30) {
+            speed = Math.max(1.5, speed - 1); // Freinage
         }
+    }
+}, { passive: true });
 
-        function playSound(type) {
-            try {
-                Tone.start();
-                if (type === 'move') synth.triggerAttackRelease_C4 ? synth.triggerAttackRelease("C5", "16n") : synth.triggerAttackRelease("C5", "16n");
-                if (type === 'crash') crashSynth.triggerAttackRelease("0.3");
-                if (type === 'bonus') bonusSynth.triggerAttackRelease("G5", "8n");
-                if (type === 'boost') bonusSynth.triggerAttackRelease("C6", "8n");
-            } catch (e) {
-                // Audio bloqué ou non initialisé par interaction utilisateur
-            }
+// Keyboard Controls
+document.addEventListener('keydown', e => {
+    if (gameState !== 'PLAYING') return;
+    if ((e.key === 'ArrowLeft' || e.key === 'a') && player.lane > 0) player.lane--;
+    if ((e.key === 'ArrowRight' || e.key === 'd') && player.lane < 2) player.lane++;
+    if ((e.key === 'ArrowUp' || e.key === ' ') && !player.isJumping) {
+        player.isJumping = true;
+        player.jumpV = 10;
+        playSound(440, 'triangle');
+    }
+    if (e.key === 'ArrowDown') speed = Math.max(1.5, speed - 1);
+});
+
+function startGame() {
+    distance = 0;
+    lives = 3;
+    speed = 2.5;
+    dayCycle = 0;
+    lastQuizDist = 0;
+    obstacles = [];
+    particles = [];
+    player.lane = 1;
+    player.x = getLaneX(1);
+    player.targetX = player.x;
+    player.y = H - 120;
+    player.jumpY = 0;
+    player.isJumping = false;
+
+    document.getElementById('start-modal').classList.add('hidden');
+    document.getElementById('gameover-modal').classList.add('hidden');
+    document.getElementById('quiz-modal').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+
+    updateHUD();
+    gameState = 'PLAYING';
+}
+
+function updateHUD() {
+    document.getElementById('score-val').innerText = Math.floor(distance) + 'm';
+    document.getElementById('lives-val').innerText = '❤️'.repeat(Math.max(0, lives));
+}
+
+function spawnObstacle() {
+    const lane = Math.floor(Math.random() * 3);
+    const types = ['car', 'door', 'hole', 'truck'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    
+    obstacles.push({
+        lane: lane,
+        x: getLaneX(lane),
+        y: -100,
+        type: type,
+        passed: false,
+        width: type === 'truck' ? 50 : 40,
+        height: type === 'truck' ? 90 : (type === 'car' ? 70 : 35)
+    });
+}
+
+function triggerQuiz() {
+    gameState = 'QUIZ';
+    playSound(600, 'sine', 0.2);
+    const qData = QUIZZES[Math.floor(Math.random() * QUIZZES.length)];
+    
+    document.getElementById('quiz-q').innerText = qData.q;
+    const optsDiv = document.getElementById('quiz-options');
+    optsDiv.innerHTML = '';
+
+    qData.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.innerHTML = `<span>${opt.text}</span>`;
+        btn.onclick = () => handleQuizAnswer(opt);
+        optsDiv.appendChild(btn);
+    });
+
+    document.getElementById('quiz-modal').classList.remove('hidden');
+}
+
+function handleQuizAnswer(opt) {
+    document.getElementById('quiz-modal').classList.add('hidden');
+    if (opt.correct) {
+        playSound(880, 'sine', 0.3);
+        distance += 50; // Bonus
+    } else {
+        playSound(200, 'sawtooth', 0.4);
+        lives--;
+        updateHUD();
+        if (lives <= 0) {
+            endGame();
+            return;
         }
+    }
+    gameState = 'PLAYING';
+}
 
-        // Conseils de sécurité routière pédagogiques
-        const tips = [
-            "🚗 Attention aux portières de voitures qui s'ouvrent brusquement (angle mort).",
-            "🚶‍♂️ Le piéton est prioritaire sur les passages adaptés. Redoublez de vigilance !",
-            "🔴 Le respect des feux tricolores est obligatoire pour les trottinettes électriques.",
-            "🦺 Le gilet haute visibilité et le casque réduisent considérablement les risques d'accidents de nuit.",
-            "🚲 Partagez la piste cyclable en respectant les autres usagers et modérez votre vitesse."
-        ];
+function endGame() {
+    gameState = 'GAMEOVER';
+    playSound(150, 'sawtooth', 0.5);
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('final-score').innerText = `Distance parcourue : ${Math.floor(distance)}m`;
+    document.getElementById('gameover-modal').classList.remove('hidden');
+}
 
-        window.movePlayer = function(direction) {
-            if (!gameRunning) return;
-            playerLane += direction;
-            if (playerLane < 0) playerLane = 0;
-            if (playerLane > 2) playerLane = 2;
-            player.targetX = lanes[playerLane];
-            playSound('move');
+// Update Loop
+let lastSpawn = 0;
+function update() {
+    if (gameState !== 'PLAYING') return;
+
+    // Cycle Jour -> Nuit (progressivement sur 1500m)
+    dayCycle = Math.min(1, distance / 1200);
+
+    // Accélération douce
+    speed = 2.5 + (distance / 400);
+
+    distance += speed * 0.05;
+    updateHUD();
+
+    // Player Movement Smooth
+    player.targetX = getLaneX(player.lane);
+    player.x += (player.targetX - player.x) * 0.2;
+
+    // Jump Logic
+    if (player.isJumping) {
+        player.jumpY += player.jumpV;
+        player.jumpV -= 0.6;
+        if (player.jumpY <= 0) {
+            player.jumpY = 0;
+            player.isJumping = false;
         }
+    }
 
-        // Contrôles au clavier
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'q') window.movePlayer(-1);
-            if (e.key === 'ArrowRight' || e.key === 'd') window.movePlayer(1);
-        });
+    // Spawn Obstacles
+    lastSpawn += speed;
+    if (lastSpawn > 140) {
+        spawnObstacle();
+        lastSpawn = 0;
+    }
 
-        window.startGame = function() {
-            initAudio();
-            document.getElementById('startScreen').classList.add('hidden');
-            document.getElementById('gameOverScreen').classList.add('hidden');
-            score = 0;
-            lives = 3;
-            baseSpeed = 4;
-            speed = 4;
-            distanceTraveled = 0;
-            timeOfDay = 0;
-            isBoosting = false;
-            boostTimer = 0;
-            playerLane = 0;
-            player.x = lanes[playerLane];
-            player.targetX = player.x;
-            obstacles = [];
-            scenery = [];
-            particles = [];
-            gameRunning = true;
-            loop();
-        }
+    // Trigger Quiz tous les 300 mètres
+    if (distance - lastQuizDist > 250) {
+        lastQuizDist = distance;
+        triggerQuiz();
+        return;
+    }
 
-        function endGame() {
-            gameRunning = false;
-            playSound('crash');
-            document.getElementById('gameContainer').classList.add('shake');
-            setTimeout(() => document.getElementById('gameContainer').classList.remove('shake'), 400);
-            
-            document.getElementById('finalScoreText').innerText = `Score final : ${Math.floor(score)}`;
-            document.getElementById('educationalTip').innerText = `"${tips[Math.floor(Math.random() * tips.length)]}"`;
-            document.getElementById('gameOverScreen').classList.remove('hidden');
-        }
+    // Update Obstacles
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        obs.y += speed * 2;
 
-        function spawnObstacleOrBonus() {
-            const laneIndex = Math.floor(Math.random() * 3);
-            const x = lanes[laneIndex];
-            
-            const rand = Math.random();
-            let type = 'car';
-            let subType = 'parked';
-
-            if (laneIndex === 0 && rand < 0.4) {
-                // Sur la piste cyclable : bonus ou cycliste lent
-                if (rand < 0.15) type = 'bonus_life';
-                else if (rand < 0.3) type = 'bonus_boost';
-                else type = 'cyclist';
+        // Collision Check
+        if (!obs.passed && Math.abs(obs.y - player.y) < 35 && obs.lane === player.lane) {
+            if (obs.type === 'hole' && player.jumpY > 20) {
+                // Évité grâce au saut !
             } else {
-                // Sur la route principale
-                if (rand < 0.25) type = 'pedestrian';
-                else if (rand < 0.45) type = 'pothole';
-                else if (rand < 0.65) type = 'traffic_light';
-                else {
-                    type = 'car';
-                    subType = Math.random() > 0.5 ? 'parked' : 'moving';
-                }
-            }
+                obs.passed = true;
+                lives--;
+                playSound(180, 'square', 0.3);
+                updateHUD();
 
-            obstacles.push({
-                lane: laneIndex,
-                x: x,
-                y: -100,
-                type: type,
-                subType: subType,
-                width: type === 'car' || type === 'cyclist' ? 42 : 32,
-                height: type === 'car' ? 75 : 45,
-                doorOpen: false,
-                animTimer: 0
-            });
-        }
-
-        function spawnScenery() {
-            // Décors latéraux (lampadaires, arbres, façades)
-            scenery.push({
-                x: Math.random() > 0.5 ? 20 : 360,
-                y: -100,
-                type: Math.random() > 0.5 ? 'tree' : 'lamp'
-            });
-        }
-
-        let spawnTimer = 0;
-        let sceneryTimer = 0;
-
-        function update() {
-            if (!gameRunning) return;
-
-            // Accélération progressive et gestion du boost
-            if (isBoosting) {
-                speed = baseSpeed * 1.8;
-                boostTimer--;
-                if (boostTimer <= 0) isBoosting = false;
-            } else {
-                speed = baseSpeed + (distanceTraveled / 2000);
-                if (speed > 12) speed = 12;
-            }
-
-            distanceTraveled += speed;
-            score += speed * 0.1;
-
-            // Cycle jour/nuit progressif (passe de 0 à 1 sur une distance de 5000)
-            timeOfDay = Math.min(1, distanceTraveled / 5000);
-
-            // Mouvement fluide du joueur vers sa voie cible
-            player.x += (player.targetX - player.x) * 0.2;
-
-            // Gestion des apparitions
-            spawnTimer++;
-            if (spawnTimer > Math.max(30, 90 - speed * 5)) {
-                spawnObstacleOrBonus();
-                spawnTimer = 0;
-            }
-
-            sceneryTimer++;
-            if (sceneryTimer > 40) {
-                spawnScenery();
-                sceneryTimer = 0;
-            }
-
-            roadMarkersOffset = (roadMarkersOffset + speed) % 40;
-
-            // Mise à jour décors
-            for (let i = scenery.length - 1; i >= 0; i--) {
-                scenery[i].y += speed;
-                if (scenery[i].y > 700) scenery.splice(i, 1);
-            }
-
-            // Mise à jour obstacles et bonus
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i];
-                obs.y += speed;
-
-                // Comportements spécifiques
-                if (obs.type === 'car' && obs.subType === 'parked') {
-                    obs.animTimer++;
-                    if (obs.animTimer > 80) obs.doorOpen = true;
+                // Particules d'impact
+                for (let k = 0; k < 12; k++) {
+                    particles.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        life: 1,
+                        color: '#ef4444'
+                    });
                 }
 
-                // Collision avec le joueur
-                let hitBoxWidth = obs.width - 8;
-                let hitBoxHeight = obs.height - 8;
-                if (
-                    Math.abs(player.x - obs.x) < hitBoxWidth &&
-                    Math.abs(player.y - obs.y) < hitBoxHeight
-                ) {
-                    if (obs.type === 'bonus_life') {
-                        if (lives < 5) lives++;
-                        playSound('bonus');
-                        obstacles.splice(i, 1);
-                        continue;
-                    } else if (obs.type === 'bonus_boost') {
-                        isBoosting = true;
-                        boostTimer = 180; // 3 secondes de boost
-                        playSound('boost');
-                        obstacles.splice(i, 1);
-                        continue;
-                    } else {
-                        // Collision / Dégât
-                        lives--;
-                        updateLivesUI();
-                        obstacles.splice(i, 1);
-                        playSound('crash');
-                        document.getElementById('gameContainer').classList.add('shake');
-                        setTimeout(() => document.getElementById('gameContainer').classList.remove('shake'), 300);
-
-                        if (lives <= 0) {
-                            endGame();
-                        }
-                        continue;
-                    }
+                if (lives <= 0) {
+                    endGame();
+                    return;
                 }
-
-                if (obs.y > 700) {
-                    obstacles.splice(i, 1);
-                }
-            }
-
-            // Mise à jour affichage HUD
-            document.getElementById('scoreDisplay').innerText = Math.floor(score);
-            document.getElementById('speedDisplay').innerText = `${Math.floor(speed * 10)} km/h`;
-            
-            const ambianceLabel = document.getElementById('ambianceLabel');
-            if (timeOfDay < 0.3) {
-                ambianceLabel.innerHTML = "☀️ Jour";
-                ambianceLabel.className = "text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-medium flex items-center gap-1";
-            } else if (timeOfDay < 0.8) {
-                ambianceLabel.innerHTML = "🌆 Crépuscule";
-                ambianceLabel.className = "text-xs px-2.5 py-1 rounded-full bg-orange-500/20 text-orange-300 font-medium flex items-center gap-1";
-            } else {
-                ambianceLabel.innerHTML = "🌙 Nuit";
-                ambianceLabel.className = "text-xs px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 font-medium flex items-center gap-1";
             }
         }
 
-        function updateLivesUI() {
-            let hearts = '';
-            for (let i = 0; i < lives; i++) hearts += '❤️';
-            document.getElementById('livesContainer').innerText = hearts;
-        }
+        if (obs.y > H + 100) obstacles.splice(i, 1);
+    }
 
-        function draw() {
-            // Assombrissement du fond selon le cycle jour/nuit
-            let r = Math.floor(15 * (1 - timeOfDay) + 5 * timeOfDay);
-            let g = Math.floor(23 * (1 - timeOfDay) + 5 * timeOfDay);
-            let b = Math.floor(42 * (1 - timeOfDay) + 15 * timeOfDay);
-            ctx.fillStyle = `rgb(${r},${g},${b})`;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Update Particules
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.05;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+}
 
-            // Trottoirs latéraux
-            ctx.fillStyle = timeOfDay > 0.7 ? '#1e293b' : '#334155';
-            ctx.fillRect(0, 0, 30, canvas.height);
-            ctx.fillRect(370, 0, 30, canvas.height);
+// Render Loop
+function render() {
+    ctx.clearRect(0, 0, W, H);
 
-            // Dessin des décors latéraux (Arbres / Lampadaires)
-            scenery.forEach(s => {
-                if (s.type === 'tree') {
-                    ctx.fillStyle = timeOfDay > 0.7 ? '#064e3b' : '#065f46';
-                    ctx.beginPath();
-                    ctx.arc(s.x, s.y, 14, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#78350f';
-                    ctx.fillRect(s.x - 3, s.y + 10, 6, 16);
-                } else {
-                    ctx.fillStyle = '#64748b';
-                    ctx.fillRect(s.x - 2, s.y, 4, 30);
-                    // Ampoule allumée de nuit
-                    if (timeOfDay > 0.5) {
-                        ctx.fillStyle = '#fde047';
-                        ctx.beginPath();
-                        ctx.arc(s.x, s.y, 6, 0, Math.PI * 2);
-                        ctx.fill();
-                        // Halo lumineux du lampadaire
-                        let grad = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, 35);
-                        grad.addColorStop(0, 'rgba(253, 224, 71, 0.3)');
-                        grad.addColorStop(1, 'rgba(253, 224, 71, 0)');
-                        ctx.fillStyle = grad;
-                        ctx.beginPath();
-                        ctx.arc(s.x, s.y, 35, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            });
+    // 1. Fond Ciel / Ville (Couleur selon DayCycle)
+    const skyR = Math.floor(56 * (1 - dayCycle) + 15 * dayCycle);
+    const skyG = Math.floor(189 * (1 - dayCycle) + 23 * dayCycle);
+    const skyB = Math.floor(248 * (1 - dayCycle) + 42 * dayCycle);
+    ctx.fillStyle = `rgb(${skyR},${skyG},${skyB})`;
+    ctx.fillRect(0, 0, W, H);
 
-            // Route principale (asphalte texturé)
-            ctx.fillStyle = '#1e293b';
-            ctx.fillRect(30, 0, 340, canvas.height);
+    // 2. Chaussée (Route)
+    const roadW = W * 0.7;
+    const roadLeft = (W - roadW) / 2;
 
-            // Piste cyclable à gauche (bande verte distincte)
-            ctx.fillStyle = timeOfDay > 0.7 ? '#064e3b' : '#065f46';
-            ctx.fillRect(30, 0, 100, canvas.height);
+    ctx.fillStyle = dayCycle > 0.6 ? '#1e293b' : '#334155';
+    ctx.fillRect(roadLeft, 0, roadW, H);
 
-            // Lignes de séparation des voies (pointillées)
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([20, 20]);
-            ctx.lineDashOffset = -roadMarkersOffset;
+    // Bords de route rétro-réfléchissants
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(roadLeft - 6, 0, 6, H);
+    ctx.fillRect(roadLeft + roadW, 0, 6, H);
 
+    // Lignes de voies (Pointillées)
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.setLineDash([20, 20]);
+    ctx.lineDashOffset = -distance * 10;
+    ctx.lineWidth = 3;
+
+    const laneW = roadW / 3;
+    ctx.beginPath();
+    ctx.moveTo(roadLeft + laneW, 0); ctx.lineTo(roadLeft + laneW, H);
+    ctx.moveTo(roadLeft + laneW * 2, 0); ctx.lineTo(roadLeft + laneW * 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 3. Obstacles
+    obstacles.forEach(obs => {
+        ctx.save();
+        ctx.translate(obs.x, obs.y);
+
+        if (obs.type === 'car') {
+            ctx.fillStyle = '#ef4444';
             ctx.beginPath();
-            ctx.moveTo(130, 0);
-            ctx.lineTo(130, canvas.height);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(270, 0);
-            ctx.lineTo(270, canvas.height);
-            ctx.stroke();
-
-            ctx.setLineDash([]); // Réinitialisation
-
-            // Dessin des obstacles et bonus
-            obstacles.forEach(obs => {
-                ctx.save();
-                ctx.translate(obs.x, obs.y);
-
-                if (obs.type === 'car') {
-                    // Voiture réaliste
-                    ctx.fillStyle = obs.subType === 'parked' ? '#ef4444' : '#3b82f6';
-                    ctx.fillRect(-obs.width/2, -obs.height/2, obs.width, obs.height);
-                    // Pare-brise
-                    ctx.fillStyle = '#0f172a';
-                    ctx.fillRect(-obs.width/2 + 4, -obs.height/2 + 10, obs.width - 8, 18);
-                    // Feux arrière
-                    ctx.fillStyle = '#f87171';
-                    ctx.fillRect(-obs.width/2 + 3, obs.height/2 - 6, 6, 4);
-                    ctx.fillRect(obs.width/2 - 9, obs.height/2 - 6, 6, 4);
-
-                    // Portière ouverte (si stationnée)
-                    if (obs.subType === 'parked' && obs.doorOpen) {
-                        ctx.fillStyle = '#b91c1c';
-                        ctx.fillRect(-obs.width/2 - 16, -10, 16, 6);
-                    }
-                } else if (obs.type === 'cyclist') {
-                    // Cycliste / Usager lent
-                    ctx.fillStyle = '#f59e0b';
-                    ctx.fillRect(-12, -20, 24, 40);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath(); ctx.arc(0, -22, 6, 0, Math.PI * 2); ctx.fill();
-                } else if (obs.type === 'pedestrian') {
-                    // Piéton imprudent
-                    ctx.fillStyle = '#ec4899';
-                    ctx.beginPath(); ctx.arc(0, -10, 10, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = '#cbd5e1';
-                    ctx.fillRect(-8, 0, 16, 22);
-                } else if (obs.type === 'pothole') {
-                    // Nid-de-poule
-                    ctx.fillStyle = '#020617';
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (obs.type === 'traffic_light') {
-                    // Feu rouge
-                    ctx.fillStyle = '#334155';
-                    ctx.fillRect(-8, -20, 16, 40);
-                    ctx.fillStyle = '#ef4444';
-                    ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
-                } else if (obs.type === 'bonus_life') {
-                    // Bonus Vie ❤️
-                    ctx.fillStyle = '#ef4444';
-                    ctx.font = '24px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('❤️', 0, 8);
-                } else if (obs.type === 'bonus_boost') {
-                    // Bonus Boost Vitesse ⚡
-                    ctx.fillStyle = '#eab308';
-                    ctx.font = '24px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('⚡', 0, 8);
-                }
-
-                ctx.restore();
-            });
-
-            // Dessin du joueur (Trottinette + Gilet Jaune + Casque)
-            ctx.save();
-            ctx.translate(player.x, player.y);
-
-            // Ombre portée
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fillRect(-player.width/2 + 4, player.height/2 - 10, player.width - 8, 12);
-
-            // Corps de la trottinette
-            ctx.fillStyle = '#475569';
-            ctx.fillRect(-3, -15, 6, 35);
+            ctx.roundRect(-20, -35, 40, 70, 8);
+            ctx.fill();
+            // Vitres
             ctx.fillStyle = '#0f172a';
-            ctx.fillRect(-14, player.height/2 - 8, 28, 6);
-
-            // Conducteur avec Casque et Gilet Jaune Fluo
-            // Tête & Casque
-            ctx.fillStyle = '#fde047';
-            ctx.beginPath(); ctx.arc(0, -20, 8, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#3b82f6'; // Casque
-            ctx.beginPath(); ctx.arc(0, -22, 9, Math.PI, Math.PI * 2); ctx.fill();
-
-            // Gilet Fluo Haute Visibilité
-            ctx.fillStyle = '#eab308';
-            ctx.fillRect(-12, -12, 24, 24);
-            // Bandes rétro-réfléchissantes du gilet
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(-10, -4, 20, 4);
-
-            ctx.restore();
-
-            // Phare avant de la trottinette (s'active de nuit)
-            if (timeOfDay > 0.3) {
-                let lightGrad = ctx.createRadialGradient(player.x, player.y - 30, 5, player.x, player.y - 120, 100);
-                lightGrad.addColorStop(0, 'rgba(253, 224, 71, 0.4)');
-                lightGrad.addColorStop(1, 'rgba(253, 224, 71, 0)');
-                ctx.fillStyle = lightGrad;
-                ctx.beginPath();
-                ctx.moveTo(player.x, player.y - 30);
-                ctx.lineTo(player.x - 50, player.y - 140);
-                ctx.lineTo(player.x + 50, player.y - 140);
-                ctx.closePath();
-                ctx.fill();
-            }
+            ctx.fillRect(-15, -15, 30, 20);
+            // Phares arrière
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(-18, 30, 8, 4);
+            ctx.fillRect(10, 30, 8, 4);
+        } else if (obs.type === 'truck') {
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.roundRect(-25, -45, 50, 90, 6);
+            ctx.fill();
+            // Zone d'angle mort visuelle
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+            ctx.fillRect(25, -20, 30, 50);
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '10px Outfit';
+            ctx.fillText('ANGLE MORT', 27, 10);
+        } else if (obs.type === 'door') {
+            ctx.fillStyle = '#64748b';
+            ctx.fillRect(-18, -30, 36, 60);
+            // Portière ouverte !
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(18, -10, 22, 6);
+            ctx.font = '12px sans-serif';
+            ctx.fillText('🚪', 20, -12);
+        } else if (obs.type === 'hole') {
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.stroke();
         }
+        ctx.restore();
+    });
 
-        function loop() {
-            update();
-            draw();
-            if (gameRunning) {
-                requestAnimationFrame(loop);
-            }
-        }
+    // 4. Joueur (Trottinette + Personnage Stylisé)
+    ctx.save();
+    ctx.translate(player.x, player.y - player.jumpY);
 
-        // Premier rendu statique de fond
-        draw();
-    </script>
+    // Ombre sous le joueur
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, player.jumpY + 25, 16 - player.jumpY * 0.2, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Trottinette
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-3, -25, 6, 50); // Planche
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(-12, -22, 24, 4); // Guidon
+
+    // Personnage (Vue du dessus / 3/4)
+    // Casque (Sécurité !)
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(0, -5, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Gilet Fluo Rétro-réfléchissant
+    ctx.fillStyle = '#84cc16';
+    ctx.beginPath();
+    ctx.roundRect(-10, 5, 20, 16, 4);
+    ctx.fill();
+    // Bandes réfléchissantes
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-8, 8, 16, 3);
+    ctx.fillRect(-8, 14, 16, 3);
+
+    // Phare LED Trottinette en mode nuit
+    if (dayCycle > 0.4) {
+        const coneGrad = ctx.createRadialGradient(0, -25, 2, 0, -120, 60);
+        coneGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+        coneGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = coneGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, -25);
+        ctx.lineTo(-40, -130);
+        ctx.lineTo(40, -130);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    ctx.restore();
+
+    // 5. Particules d'impact
+    particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    });
+
+    // Loop
+    update();
+    requestAnimationFrame(render);
+}
+
+// Lancement
+requestAnimationFrame(render);
+</script>
 </body>
 </html>
